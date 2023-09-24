@@ -3,6 +3,55 @@ import random
 import matplotlib.pyplot as plt
 import point_polygon
 import time
+from polygenerator import (
+    random_polygon,
+    random_star_shaped_polygon,
+    random_convex_polygon,
+)
+import math
+from functools import cmp_to_key
+
+DATA_PATH = "countrydata/japan.txt"
+
+def compare_ccw(point1, point2, origin):
+    arr = np.array([
+        [1,1,1],
+        [point1[0], point2[0], origin[0]],
+        [point1[1], point2[1], origin[1]]
+    ])
+
+    det = np.linalg.det(arr)
+    if det == 0:
+        dist1, dist2 = distance(point1, origin), distance(point2, origin)
+        if dist1 == dist2:
+            return 0
+        return -1 if dist1 < dist2 else 1
+    return 1 if det < 0 else -1
+    
+def distance(p1, p2):
+    return ((p1[0] - p2[0]) * (p1[0] - p2[0]) +
+            (p1[1] - p2[1]) * (p1[1] - p2[1]))
+
+def graham(points):
+    hull = []
+    leftmostPoint = min(points, key = lambda x : x[0])
+    sortedPoints = sorted(points, key = cmp_to_key(lambda p1, p2 : compare_ccw(p1, p2, leftmostPoint)))
+
+    hull.append(sortedPoints[0])
+    hull.append(sortedPoints[1])
+
+    current = 2
+
+    while current%len(points) != 0:
+        comparison = compare_ccw(hull[-2], hull[-1], sortedPoints[current])
+        if comparison == -1: # convex turn
+            hull.append(sortedPoints[current])
+            current += 1
+        elif comparison == 1: # concave turn
+            hull.pop()
+
+    hull.append(leftmostPoint)
+    return hull
 
 def jarvis(points):
     convexHullPoints = []
@@ -191,13 +240,32 @@ def checkPointOrientation(point, edge):
     if det < 0:
         return -1
 
+def getPointsByData(datapath):
+    file1 = open(datapath, "r")
+    points = []
+    
+    for point in file1.readlines():
+        points.append(tuple(float(coord) for coord in point.split(",")))
+
+    return points
 
 def plots():
-    num_points = 100
+    num_points = 1000
     box_size = 100
-    points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+    random.seed(5)
+    #points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+    points = getPointsByData(DATA_PATH)
+    
+    #points = [(3,0),(1,1),(0,3),(-1,1),(-3,0),(-1,-1),(0,-3),(1,-1)]
+    #points = random_star_shaped_polygon(num_points=500)
 
-    convexHull = convexHull2(points)
+    #points = [(1*box_size/3*random.random()*math.cos(4*math.pi*j/num_points),
+    #            box_size*random.random()*math.sin(2*math.pi*j/num_points)) for j in range(num_points)]
+    print("--- {} points ---".format(len(points)))
+
+    start_time = time.time()
+    convexHull = jarvis(points)
+    print("--- {} seconds ---".format(time.time() - start_time))
     
     plt.scatter(*zip(*points))
     plt.plot(*zip(*convexHull), marker='*', color="red")
@@ -224,21 +292,103 @@ def alg1Time():
     box_size = 100
     meantimes = []
 
-    xaxis = range(5,100,5)
+    xaxis = range(5,400,5)
+
+    random.seed(5)
 
     for num_points in xaxis:
         meantime = 0
         for i in range(10):
-            points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+            #points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+            points = random_polygon(num_points=num_points)
             start_time = time.time()
-            convexHull = convexHull1(points)
+            convexHull = jarvis(points)
             meantime += time.time() - start_time
 
         meantime /= 10 
         meantimes.append(meantime)
 
+    with open('plotdata/jarvis_polygon.txt', 'w') as f:
+        for line in list(zip(xaxis, meantimes)):
+            f.write(f"{line}\n")
+    
+
     plt.plot(xaxis, meantimes)
     plt.show()
+    
+def alg2Time():
+    box_size = 100
+    meantimes = []
+
+    xaxis = range(5,400,5)
+
+    random.seed(5)
+
+    for num_points in xaxis:
+        meantime = 0
+        for i in range(10):
+            points = []
+            for j in range(num_points):
+                length = np.sqrt(np.random.uniform(0, 1))
+                angle = np.pi * np.random.uniform(0, 2)
+
+                x = length * np.cos(angle)
+                y = length * np.sin(angle)
+
+                points.append((x,y))
+
+            start_time = time.time()
+            convexHull = jarvis(points)
+            meantime += time.time() - start_time
+
+        meantime /= 10 
+        meantimes.append(meantime)
+
+    with open('plotdata/jarvis_circle.txt', 'w') as f:
+        for line in list(zip(xaxis, meantimes)):
+            f.write(f"{line}\n")
+    
+
+    plt.plot(xaxis, meantimes)
+    plt.show()
+
+def openAndTreatFile(filepath):
+    with open(filepath, "r") as f:
+        lines = [eval(line) for line in f.readlines()]
+        lines = list(zip(*lines))
+
+    return lines
+
+def logplots():
+    line1 = openAndTreatFile("plotdata/algo1.txt")
+    line2 = openAndTreatFile("plotdata/algo2.txt")
+    line3 = openAndTreatFile("plotdata/jarvis.txt")
+
+    plt.loglog(*line1)
+    plt.loglog(*line2)
+    plt.loglog(*line3)
+    
+    slope1, intercept1 = np.polyfit(np.log(line1[0][1:]), np.log(line1[1][1:]), 1) 
+    slope2, intercept2 = np.polyfit(np.log(line2[0]), np.log(line2[1]), 1) 
+    slope3, intercept3 = np.polyfit(np.log(line3[0]), np.log(line3[1]), 1) 
+
+    regline1 = [intercept1 + slope1*x for x in np.log(line1[0][1:])]
+    regline2 = [intercept2 + slope2*x for x in np.log(line2[0])]
+    regline3 = [intercept3 + slope3*x for x in np.log(line3[0])]
+
+    plt.plot(line1[0][1:], regline1)
+    plt.plot(line2[0], regline2)
+    plt.plot(line3[0], regline3)
+
+    plt.legend(['Algorithm 1', 'Algorithm 2', 'Jarvis']+['slope1', 'slope2', 'slope3'])
+    plt.xlabel("Num points")
+    plt.ylabel("Time (sec)")
+
+    print("1 :", slope1, ": 2 :", slope2, ": 3 :", slope3)
+
+    plt.show()
+
+
 
 if __name__ == "__main__":
     plots()

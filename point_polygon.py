@@ -2,6 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image, ImageColor
 import time
+from polygenerator import (
+    random_polygon,
+    random_star_shaped_polygon,
+    random_convex_polygon,
+)
+import random
 
 DATA_PATH = "countrydata/Brazil.txt"
 
@@ -91,11 +97,25 @@ def polygonDataMain():
     im.save('simplePixel2.png') # or any image format
 
 def simplePolygonMain():
-    xsize = 1000
-    ysize = 800
+    xsize = 500
+    ysize = 500
 
+    random.seed(5)
+    polygon = random_convex_polygon(num_points=12)
+    polygon.append(polygon[0])
+    polygon = [(xsize*point[0], ysize*point[1]) for point in polygon]
     #polygon = [(300,100),(500,100),(680,300), (500,500), (300,500), (100,300)]
-    xsize, ysize, polygon = 10,10, [(0,0),(9,9),(9,0)]
+    #xsize, ysize, polygon = 10,10, [(0,0),(9,9),(9,0)]
+
+    outpoints = [(1,1),(500,50),(450,500)]
+    inpoints = [(200,200),(300,400),(100,400)]
+    examplepoints = outpoints + inpoints
+
+    plt.plot(*zip(*polygon), linewidth=3)
+    plt.scatter(*zip(*examplepoints), marker = "*", color="orange")
+    #plt.scatter(*zip(*outpoints), marker = "x", color="red")
+    #plt.scatter(*zip(*inpoints), marker = ">", color="green")
+    plt.show()
 
     im = Image.new('1', (xsize,ysize))
 
@@ -106,11 +126,98 @@ def simplePolygonMain():
 
     im.save('simplePixel.png') # or any image format
 
+def checkRandomPointsMain():
+    xsize = 500
+    ysize = 500
+    numpoints = 200
+
+    random.seed(5)
+    polygon = random_convex_polygon(num_points=6)
+    #polygon = getPolygonByData("countrydata/brazil.txt")
+    maxxsize = max(polygon, key=lambda x : x[0])[0]
+    maxysize = max(polygon, key=lambda x : x[1])[1]
+    polygon.append(polygon[0])
+    polygon = [(xsize*point[0], ysize*point[1]) for point in polygon]
+
+    #polygon = [(xsize*point[0]//maxxsize, ysize - ysize*point[1]//maxysize) for point in polygon]
+    #polygon = [(300,100),(500,100),(680,300), (500,500), (300,500), (100,300)]
+    #xsize, ysize, polygon = 10,10, [(0,0),(9,9),(9,0)]
+
+    examplepoints = [(i,j) for i in range(0, xsize, 10) for j in range(0, ysize, 10)]
+    #examplepoints = [(random.uniform(0,xsize), random.uniform(0,ysize)) for i in range(numpoints)]
+    inpoints = []
+    outpoints = []
+
+    start_time = time.time()
+    for point in examplepoints:
+        if isPointInside(point, polygon):
+            inpoints.append(point)
+        else:
+            outpoints.append(point)
+    print("--- {} seconds ---".format(time.time() - start_time))
+
+
+    plt.plot(*zip(*polygon), linewidth=3)
+    #plt.scatter(*zip(*examplepoints), marker = "*", color="orange")
+    #plt.scatter(*zip(*outpoints), marker = "x", color="red")
+    #plt.scatter(*zip(*inpoints), marker = ">", color="green")
+    plt.show()
+
+def timeanalysis():
+    xsize = 500
+    ysize = 500
+
+    timesall = []
+
+    gridrange = range(10,31,10)
+    polyrange = range(5,102, 10)
+
+
+    for gridpoint in gridrange:
+        points = [(i, j) for i in np.linspace(0,xsize,gridpoint) for j in np.linspace(0,ysize,gridpoint)]
+        times = []
+        for numpoints in polyrange:
+            random.seed(5)
+            polygon = random_polygon(num_points=numpoints)
+            
+            
+
+            elapsed = 0
+            for k in range(20):
+                inpoints = []
+                outpoints = []
+
+                start_time = time.time()
+                for point in points:
+                    if isPointInside(point, polygon):
+                        inpoints.append(point)
+                    else:
+                        outpoints.append(point)
+                elapsed += time.time() - start_time
+            
+            #dicttime = {"time": time.time() - start_time, "polygon": numpoints, "points": gridpoint*gridpoint}
+            times.append(elapsed/20)
+        timesall.append(times)
+
+
+    legend = []
+    for times in timesall:
+        plt.plot(polyrange, times)
+
+    plt.legend(["100 points", "400 points", "900 points"])
+    plt.xlabel("Number of vertices of polygon")
+    plt.ylabel("Time elapsed (sec)")
+    plt.show()
+
+
+
 if __name__ == "__main__":
     start_time = time.time()
 
     #simplePolygonMain()
-    polygonDataMain()
+    #polygonDataMain()
+    #checkRandomPointsMain()
+    timeanalysis()
 
     print("--- {} seconds ---".format(time.time() - start_time))
 
