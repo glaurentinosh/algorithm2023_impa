@@ -17,3 +17,22 @@ def compare_ccw(point1, point2, origin):
 def distance(p1, p2):
     return ((p1[0] - p2[0]) * (p1[0] - p2[0]) +
             (p1[1] - p2[1]) * (p1[1] - p2[1]))
+
+def determinant(point1, point2, origin):
+    return (point2[0]-point1[0])*(origin[1]-point1[1])-(origin[0]-point1[0])*(point2[1]-point1[1])
+
+def baricentricCoord(point, triangle):
+    t0, t1, t2 = triangle[0], triangle[1], triangle[2]
+    det0 = determinant(t0,t1,t2)
+    det1 = determinant(t0,t1,point)
+    det2 = determinant(t1,t2,point)
+    det3 = determinant(t2,t0,point)
+    
+    if det0 > 0:
+        return det1>=0 and det2>=0 and det3>=0
+    if det0 < 0:
+        return det1<=0 and det2<=0 and det3<=0
+    if det0 == 0:
+        d0 = max([distance(t0,t1), distance(t1,t2), distance(t2,t0)])
+        d1 = max([distance(t0,point), distance(t1,point), distance(t2,point)])
+        return d1<=d0
