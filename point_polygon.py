@@ -8,17 +8,7 @@ from polygenerator import (
     random_convex_polygon,
 )
 import random
-
-DATA_PATH = "countrydata/Brazil.txt"
-
-def getPolygonByData(dataPath):
-    file1 = open(dataPath, "r")
-    polygon = []
-    
-    for vertexLine in file1.readlines():
-        polygon.append(tuple(int(coord) for coord in vertexLine.split(",")))
-
-    return polygon
+from utils import *
 
 def edges(polygon):
     i = iter(polygon)
@@ -214,10 +204,10 @@ def timeanalysis():
 if __name__ == "__main__":
     start_time = time.time()
 
-    #simplePolygonMain()
+    simplePolygonMain()
     #polygonDataMain()
     #checkRandomPointsMain()
-    timeanalysis()
+    #timeanalysis()
 
     print("--- {} seconds ---".format(time.time() - start_time))
 

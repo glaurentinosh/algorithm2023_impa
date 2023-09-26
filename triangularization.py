@@ -7,6 +7,9 @@ from polygenerator import (
 )
 import random
 import matplotlib.pyplot as plt
+import time
+from utils import *
+from orientation_utils import *
 
 def triangleareasigned(triangle):
     arr = np.array([
@@ -95,41 +98,6 @@ def assignColorToTriangle(triangleids, colorList):
             colorList[triangleids[1]] = 1
             colorList[triangleids[2]] = 2
 
-def fillTriangleColor(triangle, colorList):
-    for i in range(3):
-        for j in range(i,3):
-            if colorList[triangle[i]] == colorList[triangle[j]] and colorList[triangle[j]] != -1:
-                print("failed to unique colors")
-    # first is colored
-    if colorList[triangle[0]] != -1:
-        # second is colored
-        if colorList[triangle[1]] != -1:
-            # third not colored
-            if colorList[triangle[2]] == -1:
-                colorList[triangle[2]] = -1*(colorList[triangle[0]]+colorList[triangle[1]])%3 # 0,1 ; 1,2; 2,0
-        # second not colored, third colored
-        elif colorList[triangle[2]] != -1:
-            colorList[triangle[1]] = -1*(colorList[triangle[0]]+colorList[triangle[2]])%3 # 0,1 ; 1,2; 2,0
-        # second and third not colored
-        else:
-            colorList[triangle[1]] = (colorList[triangle[0]]+1)%3
-            colorList[triangle[2]] = (colorList[triangle[1]]+1)%3
-    # first not colored
-    else:
-        # second is colored
-        if colorList[triangle[1]] != -1:
-            if colorList[triangle[2]] != -1:
-                colorList[triangle[0]] = -1*(colorList[triangle[1]]+colorList[triangle[2]])%3
-        # second not colored, third colored
-        elif colorList[triangle[2]] != -1:
-            colorList[triangle[0]] = (colorList[triangle[2]]+1)%3
-            colorList[triangle[1]] = (colorList[triangle[0]]+1)%3
-        # no one is colored
-        else:
-            colorList[triangle[0]] = 0
-            colorList[triangle[1]] = 1
-            colorList[triangle[2]] = 2
-
 def triangularizenew(polygon):
     colorList = [-1 for i in range(len(polygon))]
     polygonids = [i for i in range(len(polygon))]
@@ -167,15 +135,11 @@ def triangularizeiter(polygonids, colorList, polygon):
         point = polygon[absoluteid]
         if absoluteid == targetid or absoluteid == previousid or absoluteid == nextid:
             continue
-        if point_polygon.isPointInside(point, triangle):
+        if baricentricCoord(point, triangle):
+        #if point_polygon.isPointInside(point, triangle):
             pointinsidefound = True
-            arr = np.array([
-                [1,1,1],
-                [nextpoint[0], previouspoint[0], point[0]],
-                [nextpoint[1], previouspoint[1], point[1]]
-                ])
 
-            curcutpointarea = np.linalg.det(arr)
+            curcutpointarea = determinant(nextpoint, previouspoint, point)
             if cutpointarea < curcutpointarea:
                 cutpointarea = curcutpointarea
                 cutpointid = relativeid
@@ -192,43 +156,128 @@ def triangularizeiter(polygonids, colorList, polygon):
     #return triangularize(polygon[1:cutpointid+1]) + triangularize(polygon[cutpointid:]+[polygon[0], polygon[1]])
     return triangularizeiter(polygon1, colorList, polygon) + triangularizeiter(polygon2, colorList, polygon)
 
+def countNonColors(triangle, colorList):
+    num = 0
+    lastid = -1
+    noncolor = 0
+    for pointid in triangle:
+        if colorList[pointid] == -1:
+            num += 1
+            lastid = pointid
+        else:
+            noncolor -= colorList[pointid]
+    if num == 1:
+        noncolor = noncolor%3
+    else:
+        noncolor = -1
+    return num, lastid, noncolor 
+
+def notAllColored(triangles, colorList):
+    for triangle in triangles:
+        num, lastid, noncolor = countNonColors(triangle,colorList)
+        if num != 0:
+            return True
+    return False
+
 def colorize(points, triangles, colorList):
-    for point in points:
+    colorList[triangles[0][0]] = 0
+    colorList[triangles[0][1]] = 1
+    colorList[triangles[0][2]] = 2
+
+    while notAllColored(triangles, colorList):
         for triangle in triangles:
-            if point == triangle[0] or point == triangle[1] or point == triangle[2]:
-                fillTriangleColor(triangle, colorList)
+            num, lastid, noncolor = countNonColors(triangle, colorList)
+            if num == 1:
+                colorList[lastid] = noncolor
+
+def findLeastColor(colorList):
+    count = [0,0,0]
+    for color in colorList:
+        count[color] += 1
+    return np.argmin(count)
+
+def timeanalysis():
+    random.seed(5)
+    num_turns = 20
+    max_points = 500
+    points_step = 5
+
+    xaxis = [i for i in range(10,max_points,points_step)]
+    timetotriangle = []
+    timetocolorize = []
+
+    for i in range(10,max_points,points_step):
+        polygon = random_polygon(i)
+        meantime1, meantime2 = 0,0
+        for turn in range(num_turns):
+            start_time = time.time()
+            triangles, colorList = triangularizenew(polygon)
+            meantime1 += time.time() - start_time
+
+            start_time = time.time()
+            colorize(polygon, triangles, colorList)
+            meantime2 += time.time() - start_time
+        meantime1 /= num_turns
+        meantime2 /= num_turns
+        timetotriangle.append(meantime1)
+        timetocolorize.append(meantime2)
+
+    plt.plot(xaxis, timetotriangle, color="green")
+    plt.plot(xaxis, timetocolorize, color="red")
+    plt.xlabel("Num Points")
+    plt.ylabel("Time (sec)")
+    plt.legend(["Triangularization", "Gallery of Art"])
+    plt.show()
+
 
 def main():
-    #random.seed(5)
-    #polygon = random_polygon(num_points=20)
+    num_points = 5
+    random.seed(10)
+    start_time = time.time()
+    #polygon = random_convex_polygon(num_points=num_points)
+    polygon = getPolygonByData(DATA_PATH)
+    print("--- Generate",num_points,"polygon : {} seconds ---".format(time.time() - start_time))
     #polygon = [(1,1),(2,2),(3,1),(4,2),(5,1),(6,2),(1.5,2.5),(5.5,9),(4.5,8),(2.5,9)]
     #polygon = [(4,2),(5,1),(6,5),(3,9)]
-    polygon = [(0.5, 2), (1,1.5), (1.5, 1.8), (2, 0.5), (2.5, 1.7),
+    #polygon = [(3,1),(5,1),(7,3),(7,5),(5,5), (1, 3)]
+    
+    '''polygon = [(0.5, 2), (1,1.5), (1.5, 1.8), (2, 0.5), (2.5, 1.7),
                (2.5, 8-1.7),(2, 8-0.5),(1.5, 8-1.8),(1, 8-1.5), (0.5, 8-2),
                (0.9, 8-2.2), (1.3, 8-2.4),(1.9, 8-2.5), 
                (1.3, 2.4),(0.9, 2.2)]
+    '''
+    start_time = time.time()
     polygon = [(p[0]+0.1*random.random(), p[1]+0.1*random.random()) for p in polygon]
-               
+    print("--- Shuffle polygon: {} seconds ---".format(time.time() - start_time))
                #(0.4, 4), (1.1,3.5), (1.55, 3.3), (2.1, 4.5), (2.55, 4.2), (1.9, 2.5), (1.3, 2.4),(0.9, 2.2)]
    
-    #triangles = triangularize(polygon)
-    #colorList = getColorList(triangles, polygon)
+    start_time = time.time()
     triangles, colorList = triangularizenew(polygon)
-    colorize(polygon, triangles, colorList)
+    print("--- Triangularize {} points: {} seconds ---".format(len(polygon),time.time() - start_time))
 
-    plt.plot(*zip(*(polygon+[polygon[0]])), linewidth=2)
+    start_time = time.time()
+    colorize(polygon, triangles, colorList)
+    print("--- Colorize: {} seconds ---".format(time.time() - start_time))
+
+    cameracolor = findLeastColor(colorList)
+
+    plt.plot(*zip(*(polygon+[polygon[0]])), linewidth=2, color = 'gray')
 
     for triangleid in triangles:
         triangle = [polygon[triangleid[0]],polygon[triangleid[1]],polygon[triangleid[2]]]
         colormap = {0 : 'red', 1 : 'orange', 2 : 'cyan', -1 : 'gray'}
         colors = [colormap[colorList[triangleid[i]]] for i in range(3)]
-        plt.plot(*zip(*(triangle+[triangle[0]])), linewidth=1, linestyle = 'dotted', color = 'green')
-        plt.scatter(*zip(*(triangle)), linewidth=1, color = colors, s = 52)
+        #plt.plot(*zip(*(triangle+[triangle[0]])), linewidth=1, linestyle = 'dotted', color = 'green')
+        #plt.scatter(*zip(*(triangle)), linewidth=1, color = colors, s = 52)
 
+    mapchosencolor = lambda color : True if color == cameracolor else 15
+    style = [polygon[i] for i in range(len(colorList)) if colorList[i] == cameracolor]
+    plt.scatter(*zip(*style), linewidth=1, color=colormap[cameracolor], s = 52, marker="D")
     plt.show()
 
 
 
 
 if __name__ == "__main__":
-    main()
+    #main()
+    timeanalysis()

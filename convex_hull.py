@@ -12,8 +12,9 @@ import math
 from functools import cmp_to_key
 from orientation_utils import *
 from sorting import *
+from utils import *
 
-DATA_PATH = "countrydata/italy.txt"
+#DATA_PATH = "countrydata/italy.txt"
 
 def graham(points):
     leftmostPoint = min(points, key = lambda x : x[0])
@@ -300,9 +301,9 @@ def alg1Time():
         meantime /= num_turns 
         meantimes.append(meantime)
 
-    #with open('plotdata/graham_quick_more.txt', 'w') as f:
-    #    for line in list(zip(xaxis, meantimes)):
-    #        f.write(f"{line}\n")
+    with open('plotdata/graham_quick_more.txt', 'w') as f:
+        for line in list(zip(xaxis, meantimes)):
+            f.write(f"{line}\n")
     
 
     plt.plot(xaxis, meantimes)
