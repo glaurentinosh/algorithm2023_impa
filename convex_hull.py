@@ -10,84 +10,17 @@ from polygenerator import (
 )
 import math
 from functools import cmp_to_key
+from orientation_utils import *
+from sorting import *
 
 DATA_PATH = "countrydata/italy.txt"
-
-def compare_ccw(point1, point2, origin):
-    '''arr = np.array([
-        [1,1,1],
-        [point1[0], point2[0], origin[0]],
-        [point1[1], point2[1], origin[1]]
-    ])'''
-
-    #det = np.linalg.det(arr)
-    det = (point2[0]-point1[0])*(origin[1]-point1[1])-(origin[0]-point1[0])*(point2[1]-point1[1])
-    if det == 0:
-        dist1, dist2 = distance(point1, origin), distance(point2, origin)
-        if dist1 == dist2:
-            return 0
-        return -1 if dist1 < dist2 else 1
-    return 1 if det < 0 else -1
-    
-def distance(p1, p2):
-    return ((p1[0] - p2[0]) * (p1[0] - p2[0]) +
-            (p1[1] - p2[1]) * (p1[1] - p2[1]))
-
-def bubblesort(sortingpoints, origin):
-    points = sortingpoints.copy()
-    for i in range(len(points)):
-        for j in range(i+1,len(points)):
-            if compare_ccw(points[i], points[j], origin) == 1:
-                points[i], points[j] = points[j], points[i]
-    return points
-
-def mergeconquer(points, origin, start, medium, end):
-    size1 = medium - start + 1
-    size2 = end - medium
-
-    pointer = start
-    pointer1 = 0
-    pointer2 = 0
-
-    arr1 = [points[start + i] for i in range(size1)]
-    arr2 = [points[medium + 1 + i] for i in range(size2)]
-
-    while pointer1 < size1 and pointer2 < size2:
-        if compare_ccw(arr1[pointer1], arr2[pointer2], origin) == 1:
-            points[pointer] = arr2[pointer2]
-            pointer2 += 1
-        else:
-            points[pointer] = arr1[pointer1]
-            pointer1 += 1
-        pointer += 1
-    
-    while pointer1 < size1:
-        points[pointer] = arr1[pointer1]
-        pointer1 += 1
-        pointer += 1
-
-    while pointer2 < size2:
-        points[pointer] = arr2[pointer2]
-        pointer2 += 1
-        pointer += 1
-
-def mergedivide(points, origin, start, end):
-    if start < end:
-        medium = start + (end - start)//2
-        mergedivide(points, origin, start, medium)
-        mergedivide(points, origin, medium+1, end)
-        mergeconquer(points, origin, start, medium, end)
-
-def mergesort(sortingpoints, origin):
-    points = sortingpoints.copy()
-    mergedivide(points, origin, 0, len(points)-1)
-    return points
 
 def graham(points):
     leftmostPoint = min(points, key = lambda x : x[0])
     #sortedPoints = sorted(points, key = cmp_to_key(lambda p1, p2 : compare_ccw(p1, p2, leftmostPoint)))
     #sortedPoints = bubblesort(points, leftmostPoint)
-    sortedPoints = mergesort(points, leftmostPoint)
+    #sortedPoints = mergesort(points, leftmostPoint)
+    sortedPoints = quicksort(points, leftmostPoint)
 
     return points+[points[0]] if len(points) < 4 else graham_sorted(points, sortedPoints, leftmostPoint)
 
@@ -305,7 +238,7 @@ def getPointsByData(datapath):
     return points
 
 def plots():
-    num_points = 1000
+    num_points = 50
     box_size = 100
     random.seed(5)
     points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
@@ -348,7 +281,7 @@ def alg1Time():
     num_turns = 20
     meantimes = []
 
-    xaxis = range(20,1000,20)
+    xaxis = range(50,2000,50)
 
     random.seed(5)
     #j = 0
@@ -367,9 +300,9 @@ def alg1Time():
         meantime /= num_turns 
         meantimes.append(meantime)
 
-    with open('plotdata/graham_merge.txt', 'w') as f:
-        for line in list(zip(xaxis, meantimes)):
-            f.write(f"{line}\n")
+    #with open('plotdata/graham_quick_more.txt', 'w') as f:
+    #    for line in list(zip(xaxis, meantimes)):
+    #        f.write(f"{line}\n")
     
 
     plt.plot(xaxis, meantimes)
@@ -420,34 +353,41 @@ def openAndTreatFile(filepath):
     return lines
 
 def logplots():
-    line1 = openAndTreatFile("plotdata/graham.txt")
-    line2 = openAndTreatFile("plotdata/graham_bubble.txt")
-    line3 = openAndTreatFile("plotdata/graham_merge.txt")
+    line1 = openAndTreatFile("plotdata/graham_more.txt")
+    line2 = openAndTreatFile("plotdata/graham_merge_more.txt")
+    line3 = openAndTreatFile("plotdata/graham_quick_more.txt")
+    line4 = openAndTreatFile("plotdata/graham_quick_random_more.txt")
 
-    plt.plot(*line1)
-    #plt.plot(*line2, color = 'orange')
-    plt.plot(*line3, color = 'green')
+    plt.scatter(*line1, color = 'blue')
+    plt.scatter(*line2, color = 'green')
+    plt.scatter(*line3, color = 'red')
+    plt.scatter(*line4, color = 'purple')
     
-    slope1, intercept1 = np.polyfit(np.log(line1[0][10:]), np.log(line1[1][10:]), 1) 
-    slope2, intercept2 = np.polyfit(np.log(line2[0]), np.log(line2[1]), 1) 
-    slope3, intercept3 = np.polyfit(np.log(line3[0]), np.log(line3[1]), 1) 
+    slope1, intercept1 = np.polyfit(np.log(line1[0][1:]), np.log(line1[1][1:]), 1) 
+    slope2, intercept2 = np.polyfit(np.log(line2[0][1:]), np.log(line2[1][1:]), 1) 
+    slope3, intercept3 = np.polyfit(np.log(line3[0][1:]), np.log(line3[1][1:]), 1)
+    slope4, intercept4 = np.polyfit(np.log(line4[0][1:]), np.log(line4[1][1:]), 1) 
 
-    regline1 = [intercept1 + slope1*x for x in np.log(line1[0][10:])]
-    regline2 = [intercept2 + slope2*x for x in np.log(line2[0])]
-    regline3 = [intercept3 + slope3*x for x in np.log(line3[0])]
+    regline1 = [intercept1 + slope1*x for x in np.log(line1[0][1:])]
+    regline2 = [intercept2 + slope2*x for x in np.log(line2[0][1:])]
+    regline3 = [intercept3 + slope3*x for x in np.log(line3[0][1:])]
+    regline4 = [intercept4 + slope4*x for x in np.log(line4[0][1:])]
 
     #plt.plot(line1[0][1:], regline1)
     #plt.plot(line2[0], regline2)
     #plt.plot(line3[0], regline3)
 
     #legend = ['Algorithm 1', 'Algorithm 2', 'Jarvis']+['slope1', 'slope2', 'slope3']
-    legend = ['Built-in Sort', 'Bubble Sort', 'Merge Sort']
+    #legend = ['Built-in Sort', 'Bubble Sort', 'Merge Sort']
+    #legend = ['Quick Sort', 'Quick Sort (random pivot)', 'Built-in Sort']
+    legend = ['Built-in Sort', 'Merge Sort', "Quick Sort", "Quick Sort (random pivot)"]
+    #legend = ['Quick Sort', "Quick Sort (random pivot)"]
     #plt.legend(legend[2:3])
-    plt.legend(legend[0:1]+legend[2:3])
+    plt.legend(legend)
     plt.xlabel("Num points")
     plt.ylabel("Time (sec)")
 
-    print("1 :", slope1, ": 2 :", slope2, ": 3 :", slope3)
+    print("1 :", slope1, ": 2 :", slope2, ": 3 :", slope3, ": 4 :", slope4)
 
     plt.show()
 
