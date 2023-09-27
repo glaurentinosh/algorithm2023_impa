@@ -222,8 +222,13 @@ def timeanalysis():
         timetotriangle.append(meantime1)
         timetocolorize.append(meantime2)
 
-    plt.plot(xaxis, timetotriangle, color="green")
-    plt.plot(xaxis, timetocolorize, color="red")
+    slope1, intercept1 = np.polyfit(np.log(xaxis[1:]), np.log(timetotriangle[1:]), 1) 
+    slope2, intercept2 = np.polyfit(np.log(xaxis[1:]), np.log(timetocolorize[1:]), 1) 
+
+    print(slope1, slope2)
+
+    plt.loglog(xaxis, timetotriangle, color="green")
+    plt.loglog(xaxis, timetocolorize, color="red")
     plt.xlabel("Num Points")
     plt.ylabel("Time (sec)")
     plt.legend(["Triangularization", "Gallery of Art"])
@@ -235,12 +240,13 @@ def main():
     random.seed(10)
     start_time = time.time()
     #polygon = random_convex_polygon(num_points=num_points)
-    polygon = getPolygonByData(DATA_PATH)
+    #polygon = getPolygonByData(DATA_PATH)
     print("--- Generate",num_points,"polygon : {} seconds ---".format(time.time() - start_time))
     #polygon = [(1,1),(2,2),(3,1),(4,2),(5,1),(6,2),(1.5,2.5),(5.5,9),(4.5,8),(2.5,9)]
     #polygon = [(4,2),(5,1),(6,5),(3,9)]
     #polygon = [(3,1),(5,1),(7,3),(7,5),(5,5), (1, 3)]
-    
+    polygon = [(1,2),(5,1),(2,2),(6,3),(3,3),(4,4)]
+
     '''polygon = [(0.5, 2), (1,1.5), (1.5, 1.8), (2, 0.5), (2.5, 1.7),
                (2.5, 8-1.7),(2, 8-0.5),(1.5, 8-1.8),(1, 8-1.5), (0.5, 8-2),
                (0.9, 8-2.2), (1.3, 8-2.4),(1.9, 8-2.5), 
@@ -263,16 +269,25 @@ def main():
 
     plt.plot(*zip(*(polygon+[polygon[0]])), linewidth=2, color = 'gray')
 
-    for triangleid in triangles:
+    for triangleid in triangles[0:2]:
         triangle = [polygon[triangleid[0]],polygon[triangleid[1]],polygon[triangleid[2]]]
         colormap = {0 : 'red', 1 : 'orange', 2 : 'cyan', -1 : 'gray'}
         colors = [colormap[colorList[triangleid[i]]] for i in range(3)]
-        #plt.plot(*zip(*(triangle+[triangle[0]])), linewidth=1, linestyle = 'dotted', color = 'green')
-        #plt.scatter(*zip(*(triangle)), linewidth=1, color = colors, s = 52)
+        plt.plot(*zip(*(triangle+[triangle[0]])), linewidth=1, linestyle = 'dotted', color = 'green')
+        plt.scatter(*zip(*(triangle)), linewidth=1, color = colors, s = 52)
 
     mapchosencolor = lambda color : True if color == cameracolor else 15
     style = [polygon[i] for i in range(len(colorList)) if colorList[i] == cameracolor]
-    plt.scatter(*zip(*style), linewidth=1, color=colormap[cameracolor], s = 52, marker="D")
+    
+    #plt.scatter(*zip(*style), linewidth=1, color=colormap[cameracolor], s = 52, marker="D")
+    
+    ## ignore here
+    #plt.plot(*zip(*(polygon[0:3])), marker='o', color='blue')#, linestyle = 'dashed')
+    #plt.plot(*zip(*(polygon[2:]+polygon[0:1])), marker='o', color='red')#, linestyle = 'dashed')
+    #plt.plot(*zip(*(polygon[0:1]+polygon[2:3])), marker='o', color='green', linestyle = 'dashed')
+    #plt.scatter(*zip(*polygon[2:3]), marker='H', s = 52, color='purple')
+    ###
+
     plt.show()
 
 

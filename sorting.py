@@ -3,6 +3,7 @@ from orientation_utils import *
 
 def quicksort(alist, origin):
     newlist = alist.copy()
+    random.shuffle(newlist)
     start = 0
     end = len(newlist)-1
     quickconquer(newlist, start, end, origin)
@@ -12,13 +13,8 @@ def getPivotPos(start, end):
     return random.randrange(start, end+1)
 
 def quickdivide(alist, start, end, origin):
-    #pivot = alist[end]
-    pivotId = getPivotPos(start, end)
-    pivot = alist[pivotId]
-
-    alist[pivotId] = alist[end]
-    alist[end] = pivot
-
+    pivot = alist[end]
+    
     pointer = start
 
     for j in range(start, end):

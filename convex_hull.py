@@ -301,7 +301,7 @@ def alg1Time():
         meantime /= num_turns 
         meantimes.append(meantime)
 
-    with open('plotdata/graham_quick_more.txt', 'w') as f:
+    with open('plotdata/graham_quick_best.txt', 'w') as f:
         for line in list(zip(xaxis, meantimes)):
             f.write(f"{line}\n")
     
@@ -354,15 +354,15 @@ def openAndTreatFile(filepath):
     return lines
 
 def logplots():
-    line1 = openAndTreatFile("plotdata/graham_more.txt")
-    line2 = openAndTreatFile("plotdata/graham_merge_more.txt")
+    line1 = openAndTreatFile("plotdata/graham_quick_more.txt")
+    line2 = openAndTreatFile("plotdata/graham_quick_best.txt")
     line3 = openAndTreatFile("plotdata/graham_quick_more.txt")
     line4 = openAndTreatFile("plotdata/graham_quick_random_more.txt")
 
     plt.scatter(*line1, color = 'blue')
     plt.scatter(*line2, color = 'green')
-    plt.scatter(*line3, color = 'red')
-    plt.scatter(*line4, color = 'purple')
+    #plt.scatter(*line3, color = 'red')
+    #plt.scatter(*line4, color = 'purple')
     
     slope1, intercept1 = np.polyfit(np.log(line1[0][1:]), np.log(line1[1][1:]), 1) 
     slope2, intercept2 = np.polyfit(np.log(line2[0][1:]), np.log(line2[1][1:]), 1) 
