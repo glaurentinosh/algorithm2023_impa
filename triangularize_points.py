@@ -6,6 +6,7 @@ from point_polygon import isPointInside
 import random
 import time
 import matplotlib.pyplot as plt
+import numpy as np
 
 def triangularizepoints(points):
     # points are triangle
@@ -38,7 +39,8 @@ def graham_triangularize_sorted(points, sortedPoints, leftmostPoint):
     hull = []
     hull2 = []
     trianglesid = []
-    adjlist = []
+    triangle_num = 0
+    hashmap = {}
 
     # first step
     hull.append(0)
@@ -48,7 +50,10 @@ def graham_triangularize_sorted(points, sortedPoints, leftmostPoint):
 
     while current%len(points) != 0:
         while len(hull) > 1 and compare_ccw(sortedPoints[hull[-2]], sortedPoints[hull[-1]], sortedPoints[current]) != -1: # concave turn
-            trianglesid.append([hull[-2], hull[-1], current])
+            thistriangle = [hull[-2], hull[-1], current,-1,-1,-1]
+            trianglesid.append(thistriangle)
+            updateHashmap(hashmap,triangle_num,thistriangle, trianglesid)
+            triangle_num += 1
             hull.pop()
         hull.append(current)
         current += 1
@@ -60,32 +65,176 @@ def graham_triangularize_sorted(points, sortedPoints, leftmostPoint):
     current = 2
 
     while current%len(points) != 0:
-        while len(hull2) > 1 and compare_ccw(sortedPoints[hull2[-2]], sortedPoints[hull2[-1]], sortedPoints[current]) != 1: # concave turn
-            trianglesid.append([hull2[-2], hull2[-1], current])
+        while len(hull2) > 1 and compare_ccw(sortedPoints[hull2[-2]], sortedPoints[hull2[-1]], sortedPoints[current]) != 1: # convex turn
+            thistriangle = [hull2[-2], hull2[-1], current,-1,-1,-1]
+            trianglesid.append(thistriangle)
+            updateHashmap(hashmap,triangle_num,thistriangle, trianglesid)
+            triangle_num += 1
             hull2.pop()
         hull2.append(current)
         current += 1
 
-    return [sortedPoints[id] for id in hull+hull2[-2::-1]],[[sortedPoints[t[0]],sortedPoints[t[1]],sortedPoints[t[2]]] for t in trianglesid]
-    #return hull+hull2[-2::-1], triangles
+    for id in range(len(trianglesid)):
+        updateHashmap(hashmap,id,trianglesid[id], trianglesid)
+
+    return [
+        sortedPoints[id] for id in hull+hull2[-2::-1]
+        ], trianglesid, [
+            [sortedPoints[t[0]],sortedPoints[t[1]],sortedPoints[t[2]]] for t in trianglesid]
+
+def updateHashmap(hashmap, triangleid, triangle, trianglesid):
+    if str(triangle[0:2]) not in hashmap:
+        hashmap[str(triangle[0:2])] = triangleid
+    else:
+        triangle[5] = hashmap[str(triangle[0:2])] if triangle[5] == -1 else triangle[5]
+        hashmap[str(triangle[0:2])] = triangleid
+    if str(triangle[1:3]) not in hashmap:
+        hashmap[str(triangle[1:3])] = triangleid
+    else:
+        triangle[3] = hashmap[str(triangle[1:3])] if triangle[3] == -1 else triangle[3]
+        hashmap[str(triangle[1:3])] = triangleid
+    if str(triangle[0:3:2]) not in hashmap:
+        hashmap[str(triangle[0:3:2])] = triangleid
+    else:
+        triangle[4] = hashmap[str(triangle[0:3:2])] if triangle[4] == -1 else triangle[4]
+        hashmap[str(triangle[0:3:2])] = triangleid
 
 
-def main():
-    num_points = 25
+def checkCommonEdge(triangle1ids, triangle2ids):
+    edge = []
+    count = 0
+    i, j = 0
+    while i<3 and j<3 and count < 2:
+        if triangle1ids[i] == triangle2ids[j]:
+            count+=1
+            edge.append(triangle1ids[i])
+            i+=1
+            j+=1
+        elif triangle1ids[i] < triangle2ids[j]:
+            i+=1
+        else:
+            j+=1
+    return True, edge if count == 2 else False, []
+
+def getCentroid(points):
+    return (sum([p[0] for p in points])/len(points),sum([p[1] for p in points])/len(points))
+
+def isInBorder(triangle, id):
+    return triangle[3] in [-1,id] or triangle[4] in [-1,id] or triangle[5] in [-1,id]
+
+def getNextTrianglePath(triangleid, adjList, path):
+    for i in range(3,6):
+        if adjList[triangleid][i] not in path:
+            path.append(adjList[triangleid][i])
+            break
+
+def getPathFromCentroid(centroid, triangles, adjList):
+    centertriangle = 0
+    for i in range(len(triangles)):
+        if isPointInside(centroid,triangles[i]):
+            centertriangle = i
+            break
+    
+    path = []
+    path.append(centertriangle)
+
+    while not isInBorder(adjList[centertriangle],centertriangle):
+        getNextTrianglePath(centertriangle, adjList, path)
+        centertriangle = path[-1]
+    
+    #path.append(adjList[centertriangle][3])
+
+    return path
+
+def plots():
+    num_points = 12
     box_size = 100
     random.seed(1)
-    points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
-    
+    #points = [(i+3*random.random(),j+3*random.random()) for i in range(5,100,5) for j in range(10,100,15)]
+    points = sorted([(box_size*random.random(), box_size*random.random()) for i in range(num_points)])
+    centroid = (sum([p[0] for p in points])/len(points),sum([p[1] for p in points])/len(points))
+
     print("--- {} points ---".format(len(points)))
     start_time = time.time()
-    convexHull, triangles = triangularize_graham(points)
+    convexHull, adjList, triangles = triangularize_graham(points)
     print("--- {} milliseconds ---".format(1000*(time.time() - start_time)))
     
-    plt.scatter(*zip(*points))
+    print(adjList)
+
+    pathFromCentroid = getPathFromCentroid(centroid, triangles, adjList)
+    print(pathFromCentroid[2],"path:", pathFromCentroid)
+    trianglesInPath = [triangles[id] for id in pathFromCentroid]
+    pathPoints = [centroid]+[getCentroid(triangle) for triangle in trianglesInPath]
+
+    print(*zip(*pathPoints))
+    plt.plot(*zip(*pathPoints), marker='h', color="blue")
+
+    #plt.scatter(*zip(*points))
     plt.plot(*zip(*convexHull), marker='*', color="red")
-    for triangle in triangles:
-        plt.plot(*zip(*triangle), marker='*', color="green", linestyle="dashed")
+    for id in range(len(triangles)):
+        triangle = triangles[id]
+        c = getCentroid(triangle)
+        #plt.text(c[0],c[1],'{}'.format(id))
+        plt.plot(*zip(*triangle), marker="x", markersize=1, color="green", linestyle="dotted", alpha=0.5)
+
+    plt.show()
+    
+def generateTxtTime():
+    box_size = 100
+    num_turns = 20
+    meantimes = []
+
+    xaxis = range(20,5000,20)
+
+    random.seed(5)
+    #j = 0
+    for num_points in xaxis:
+        #print("points :", j)
+        #j += 1
+        meantime = 0
+        for i in range(num_turns):
+            #print("turn :", i)
+            points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+            #points = random_polygon(num_points=num_points)
+            start_time = time.time()
+            hull, adjList, triangles = triangularize_graham(points)
+            meantime += time.time() - start_time
+
+        meantime /= num_turns 
+        meantimes.append(meantime)
+
+    with open('plotdata/triangularize.txt', 'w') as f:
+        for line in list(zip(xaxis, meantimes)):
+            f.write(f"{line}\n")
+
+    plt.plot(xaxis, meantimes)
     plt.show()
 
+def logplots():
+    line1 = openAndTreatFile("plotdata/triangularize.txt")
+    line2 = openAndTreatFile("plotdata/graham_quick_best.txt")
+
+    plt.scatter(*line1, color = 'blue')
+    #plt.scatter(*line2, color = 'green')
+    #    
+    slope1, intercept1 = np.polyfit(np.log(line1[0][1:]), np.log(line1[1][1:]), 1) 
+    slope2, intercept2 = np.polyfit(np.log(line2[0][1:]), np.log(line2[1][1:]), 1) 
+
+    regline1 = [intercept1 + slope1*x for x in np.log(line1[0][1:])]
+    regline2 = [intercept2 + slope2*x for x in np.log(line2[0][1:])]
+
+    legend = ['Graham', "Quick Sort (random pivot)"]
+    
+    plt.legend(legend)
+    plt.xlabel("Num points")
+    plt.ylabel("Time (sec)")
+
+    print("1 :", slope1, ": 2 :", slope2)
+
+    plt.show()
+
+
 if __name__ == "__main__":
-    main()
+    #plots()
+    #generateTxtTime()
+    logplots()

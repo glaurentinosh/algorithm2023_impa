@@ -346,13 +346,6 @@ def alg2Time():
     plt.plot(xaxis, meantimes)
     plt.show()
 
-def openAndTreatFile(filepath):
-    with open(filepath, "r") as f:
-        lines = [eval(line) for line in f.readlines()]
-        lines = list(zip(*lines))
-
-    return lines
-
 def logplots():
     line1 = openAndTreatFile("plotdata/graham_quick_more.txt")
     line2 = openAndTreatFile("plotdata/graham_quick_best.txt")

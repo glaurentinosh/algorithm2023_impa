@@ -9,6 +9,13 @@ def getPolygonByData(dataPath):
 
     return polygon
 
+def openAndTreatFile(filepath):
+    with open(filepath, "r") as f:
+        lines = [eval(line) for line in f.readlines()]
+        lines = list(zip(*lines))
+
+    return lines
+
 def edges(polygon):
     i = iter(polygon)
     first = prev = item = next(i)
