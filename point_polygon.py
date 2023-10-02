@@ -10,14 +10,6 @@ from polygenerator import (
 import random
 from utils import *
 
-def edges(polygon):
-    i = iter(polygon)
-    first = prev = item = next(i)
-    for item in i:
-        yield prev, item
-        prev = item
-    yield item, first
-
 def edgeOrientation(edge):
     return 1 if edge[1][1] > edge[0][1] else -1
 
