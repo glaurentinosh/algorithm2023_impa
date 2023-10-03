@@ -36,3 +36,20 @@ def baricentricCoord(point, triangle):
         d0 = max([distance(t0,t1), distance(t1,t2), distance(t2,t0)])
         d1 = max([distance(t0,point), distance(t1,point), distance(t2,point)])
         return d1<=d0
+    
+def baricentricCoordNew(point, triangle):
+    t0, t1, t2 = triangle[0], triangle[1], triangle[2]
+    det0 = determinant(t0,t1,t2)
+    det1 = determinant(t0,t1,point)
+    det2 = determinant(t1,t2,point)
+    det3 = determinant(t2,t0,point)
+    
+    has_neg = (det1 < 0) or (det2 < 0) or (det3 < 0)
+    has_pos = (det1 > 0) or (det2 > 0) or (det3 > 0)
+
+    if det0 != 0:
+        return not (has_neg and has_pos)
+    if det0 == 0:
+        d0 = max([distance(t0,t1), distance(t1,t2), distance(t2,t0)])
+        d1 = max([distance(t0,point), distance(t1,point), distance(t2,point)])
+        return d1<=d0    

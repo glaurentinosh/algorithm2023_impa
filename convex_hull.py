@@ -18,10 +18,10 @@ from utils import *
 
 def graham(points):
     leftmostPoint = min(points, key = lambda x : x[0])
-    #sortedPoints = sorted(points, key = cmp_to_key(lambda p1, p2 : compare_ccw(p1, p2, leftmostPoint)))
+    sortedPoints = sorted(points, key = cmp_to_key(lambda p1, p2 : compare_ccw(p1, p2, leftmostPoint)))
     #sortedPoints = bubblesort(points, leftmostPoint)
     #sortedPoints = mergesort(points, leftmostPoint)
-    sortedPoints = quicksort(points, leftmostPoint)
+    #sortedPoints = quicksort(points, leftmostPoint)
 
     return points+[points[0]] if len(points) < 4 else graham_sorted(points, sortedPoints, leftmostPoint)
 

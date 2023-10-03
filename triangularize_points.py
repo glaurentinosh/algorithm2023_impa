@@ -8,7 +8,8 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-def triangularizepoints(points):
+def triangularizepoints(mypoints):
+    points = mypoints.copy()
     # points are triangle
     if len(points) == 3:
         return [points]
@@ -17,16 +18,66 @@ def triangularizepoints(points):
     if len(hull) == len(points) + 1:
         return [[points[0], points[i], points[i+1]] for i in range(1,len(points)-1)]
 
-    # find a point inside the hull
-    firstpoint = next((point for point in points if point not in hull))
+    # # find a point inside the hull
+    points = [point for point in points if point not in hull]
+    #firstpoint = next((point for point in points if point not in hull))
+    #firstpoint = points[0]
     triangles = []
 
-    trianglehulls = [[firstpoint,edge[0], edge[1]] for edge in edges(hull)]
-    for trianglehull in trianglehulls:
-        triangularize_rec(points, trianglehull, triangles)
+    #trianglehulls = [[firstpoint,edge[0], edge[1]] for edge in edges(hull)]
+    trianglehulls = [[hull[0], hull[i], hull[i+1]] for i in range(1,len(hull)-1)]
+    points = [point for point in points for h in trianglehulls if point not in h]
 
-def triangularize_rec(points):
-    return
+    while len(points) > 0:
+        j = 0
+        while j < len(trianglehulls) and len(points) > 0:
+            if isPointInside(points[-1], trianglehulls[j]):    
+                edges = [[trianglehulls[j][0],trianglehulls[j][1]],
+                        [trianglehulls[j][1],trianglehulls[j][2]],
+                        [trianglehulls[j][2],trianglehulls[j][0]]]
+                hullsToAdd = [[points[-1],edge[0],edge[1]] for edge in edges]
+                trianglehulls = trianglehulls[:j]+trianglehulls[j+1:]
+                trianglehulls.append(hullsToAdd[0])
+                trianglehulls.append(hullsToAdd[1])
+                trianglehulls.append(hullsToAdd[2])
+                points = points[:-1]
+            j+=1
+        points = points[:-1]
+    # count = 0
+    # while len(trianglehulls) > 0 and count < 200:
+    #     j = 0
+    #     count += 1
+    #     while j < len(points):
+    #         if baricentricCoord(points[j], trianglehulls[-1]):
+    #             if points[j] not in trianglehulls[-1]:
+    #                 break
+    #         j += 1
+    #     if j == len(points):
+    #         triangles.append(trianglehulls[-1])
+    #         trianglehulls.pop()
+    #     else:
+    #         firstpoint = points[j]
+    #         del points[j]
+    #         hullsToAdd = [[firstpoint,edge[0], edge[1]] for edge in edges(trianglehulls[-1])]
+    #         trianglehulls.pop()
+    #         trianglehulls.append(hullsToAdd[0])
+    #         trianglehulls.append(hullsToAdd[1])
+    #         trianglehulls.append(hullsToAdd[2])
+
+    return hull, trianglehulls
+
+def triangularize_rec(points,hull,triangles):
+    for j in range(len(points)):
+        if isPointInside(points[j], hull):
+            break
+    if j == len(points):
+        triangles.append(hull)
+    else:
+        firstpoint = points[j]
+        trianglehulls = [[firstpoint,edge[0], edge[1]] for edge in edges(hull)]
+        for trianglehull in trianglehulls:
+            triangularize_rec(points, trianglehull, triangles)
+    
 
 def triangularize_graham(points):
     leftmostPoint = min(points, key = lambda x : x[0])
@@ -233,8 +284,30 @@ def logplots():
 
     plt.show()
 
+def recursiveTriangularizeMain():
+    num_points = 100
+    box_size = 100
+    random.seed(1)
+    #points = [(i+3*random.random(),j+3*random.random()) for i in range(5,100,5) for j in range(10,100,15)]
+    points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+
+    print("--- {} points ---".format(len(points)))
+    start_time = time.time()
+    convexHull, triangles = triangularizepoints(points)
+    print("--- {} milliseconds ---".format(1000*(time.time() - start_time)))
+
+    plt.scatter(*zip(*points))
+    plt.plot(*zip(*convexHull), marker='*', color="red")
+    for id in range(len(triangles)):
+        triangle = triangles[id]
+        c = getCentroid(triangle)
+        #plt.text(c[0],c[1],'{}'.format(id))
+        plt.plot(*zip(*triangle), marker="x", markersize=1, color="green", linestyle="dotted", alpha=0.5)
+
+    plt.show()
 
 if __name__ == "__main__":
     #plots()
     #generateTxtTime()
-    logplots()
+    #logplots()
+    recursiveTriangularizeMain()
