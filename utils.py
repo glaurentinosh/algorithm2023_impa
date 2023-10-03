@@ -1,4 +1,4 @@
-DATA_PATH = "countrydata/nazcamonkey.txt"
+DATA_PATH = "countrydata/guam.txt"
 
 def getPolygonByData(dataPath):
     file1 = open(dataPath, "r")

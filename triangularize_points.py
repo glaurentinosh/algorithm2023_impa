@@ -43,41 +43,8 @@ def triangularizepoints(mypoints):
                 points = points[:-1]
             j+=1
         points = points[:-1]
-    # count = 0
-    # while len(trianglehulls) > 0 and count < 200:
-    #     j = 0
-    #     count += 1
-    #     while j < len(points):
-    #         if baricentricCoord(points[j], trianglehulls[-1]):
-    #             if points[j] not in trianglehulls[-1]:
-    #                 break
-    #         j += 1
-    #     if j == len(points):
-    #         triangles.append(trianglehulls[-1])
-    #         trianglehulls.pop()
-    #     else:
-    #         firstpoint = points[j]
-    #         del points[j]
-    #         hullsToAdd = [[firstpoint,edge[0], edge[1]] for edge in edges(trianglehulls[-1])]
-    #         trianglehulls.pop()
-    #         trianglehulls.append(hullsToAdd[0])
-    #         trianglehulls.append(hullsToAdd[1])
-    #         trianglehulls.append(hullsToAdd[2])
 
     return hull, trianglehulls
-
-def triangularize_rec(points,hull,triangles):
-    for j in range(len(points)):
-        if isPointInside(points[j], hull):
-            break
-    if j == len(points):
-        triangles.append(hull)
-    else:
-        firstpoint = points[j]
-        trianglehulls = [[firstpoint,edge[0], edge[1]] for edge in edges(hull)]
-        for trianglehull in trianglehulls:
-            triangularize_rec(points, trianglehull, triangles)
-    
 
 def triangularize_graham(points):
     leftmostPoint = min(points, key = lambda x : x[0])
@@ -198,11 +165,12 @@ def getPathFromCentroid(centroid, triangles, adjList):
     return path
 
 def plots():
-    num_points = 12
+    num_points = 11
     box_size = 100
     random.seed(1)
-    #points = [(i+3*random.random(),j+3*random.random()) for i in range(5,100,5) for j in range(10,100,15)]
+    #points = [(i+3*random.random(),j+3*random.random()) for i in range(5,200,19) for j in range(10,200,17)]
     points = sorted([(box_size*random.random(), box_size*random.random()) for i in range(num_points)])
+    #points = getPolygonByData(DATA_PATH)
     centroid = (sum([p[0] for p in points])/len(points),sum([p[1] for p in points])/len(points))
 
     print("--- {} points ---".format(len(points)))
@@ -210,17 +178,17 @@ def plots():
     convexHull, adjList, triangles = triangularize_graham(points)
     print("--- {} milliseconds ---".format(1000*(time.time() - start_time)))
     
-    print(adjList)
+    #print(adjList)
 
     pathFromCentroid = getPathFromCentroid(centroid, triangles, adjList)
-    print(pathFromCentroid[2],"path:", pathFromCentroid)
+    #print(pathFromCentroid[2],"path:", pathFromCentroid)
     trianglesInPath = [triangles[id] for id in pathFromCentroid]
     pathPoints = [centroid]+[getCentroid(triangle) for triangle in trianglesInPath]
 
-    print(*zip(*pathPoints))
+    #print(*zip(*pathPoints))
     plt.plot(*zip(*pathPoints), marker='h', color="blue")
 
-    #plt.scatter(*zip(*points))
+    plt.scatter(*zip(*points))
     plt.plot(*zip(*convexHull), marker='*', color="red")
     for id in range(len(triangles)):
         triangle = triangles[id]
@@ -235,26 +203,30 @@ def generateTxtTime():
     num_turns = 20
     meantimes = []
 
-    xaxis = range(20,5000,20)
+    xaxis = range(20,2000,20)
 
     random.seed(5)
-    #j = 0
+    j = 0
     for num_points in xaxis:
-        #print("points :", j)
-        #j += 1
+        print("points :", j)
+        j += 1
         meantime = 0
         for i in range(num_turns):
-            #print("turn :", i)
+            print("turn :", i)
             points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
             #points = random_polygon(num_points=num_points)
             start_time = time.time()
             hull, adjList, triangles = triangularize_graham(points)
+            centroid = getCentroid(points)
+            start_time = time.time()
+            pathFromCentroid = getPathFromCentroid(centroid, triangles, adjList)
+            #hull, triangles = triangularizepoints(points)
             meantime += time.time() - start_time
 
         meantime /= num_turns 
         meantimes.append(meantime)
 
-    with open('plotdata/triangularize.txt', 'w') as f:
+    with open('plotdata/graham_path_test.txt', 'w') as f:
         for line in list(zip(xaxis, meantimes)):
             f.write(f"{line}\n")
 
@@ -262,23 +234,24 @@ def generateTxtTime():
     plt.show()
 
 def logplots():
-    line1 = openAndTreatFile("plotdata/triangularize.txt")
-    line2 = openAndTreatFile("plotdata/graham_quick_best.txt")
+    line1 = openAndTreatFile("plotdata/graham_path.txt")
+    line2 = openAndTreatFile("plotdata/triangularize_badly.txt")
 
-    plt.scatter(*line1, color = 'blue')
-    #plt.scatter(*line2, color = 'green')
+
+    plt.loglog(*line1, color = 'purple')
+    #plt.loglog(*line2, color = 'orange')
     #    
-    slope1, intercept1 = np.polyfit(np.log(line1[0][1:]), np.log(line1[1][1:]), 1) 
+    slope1, intercept1 = np.polyfit(np.log(line1[0][10:]), np.log(line1[1][10:]), 1) 
     slope2, intercept2 = np.polyfit(np.log(line2[0][1:]), np.log(line2[1][1:]), 1) 
 
     regline1 = [intercept1 + slope1*x for x in np.log(line1[0][1:])]
     regline2 = [intercept2 + slope2*x for x in np.log(line2[0][1:])]
 
-    legend = ['Graham', "Quick Sort (random pivot)"]
+    legend = ['Centroid path']
     
     plt.legend(legend)
     plt.xlabel("Num points")
-    plt.ylabel("Time (sec)")
+    plt.ylabel("Time (ms)")
 
     print("1 :", slope1, ": 2 :", slope2)
 
@@ -288,8 +261,8 @@ def recursiveTriangularizeMain():
     num_points = 100
     box_size = 100
     random.seed(1)
-    #points = [(i+3*random.random(),j+3*random.random()) for i in range(5,100,5) for j in range(10,100,15)]
-    points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
+    points = [(i+3*random.random(),j+3*random.random()) for i in range(5,200,19) for j in range(10,200,17)]
+    #points = [(box_size*random.random(), box_size*random.random()) for i in range(num_points)]
 
     print("--- {} points ---".format(len(points)))
     start_time = time.time()
@@ -309,5 +282,5 @@ def recursiveTriangularizeMain():
 if __name__ == "__main__":
     #plots()
     #generateTxtTime()
-    #logplots()
-    recursiveTriangularizeMain()
+    logplots()
+    #recursiveTriangularizeMain()
