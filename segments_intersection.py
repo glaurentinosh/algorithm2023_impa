@@ -34,25 +34,26 @@ def getEventList(segments : list[Segment]):
 
 def detectIntersection(segments : list[Segment]):
     eventList = getEventList(segments)
-    state = AVL_Tree()
+    stateTree = AVL_Tree()
     root = None
     L = len(segments)
 
     for i in eventList:
         if i // L == 0:
-            root = state.insert(root, i, segments[i%L][i//L][1])
+            root = stateTree.insert(root, i, segments[i%L][i//L][1])
         elif i // L == 1:
-            root = state.delete(root, i, segments[i%L][i//L][1])
+            root = stateTree.delete(root, i, segments[i%L][i//L][1])
 
-        if state.getHeight(root) > 1:
-            firstNode = state.getMinValueNode(root)
-            while(state.getNextNode(firstNode) is not None):
-                id1 = state.id
-                id2 = state.getNextNode(firstNode).id
+        if stateTree.getHeight(root) > 1:
+            firstNode = stateTree.getMinValueNode(root)
+            while(stateTree.getNextNode(firstNode) is not None):
+                id1 = firstNode.id
+                id2 = stateTree.getNextNode(firstNode).id
                 if checkSegmentIntersection(segments[id1], segments[id2]) == True:
-                    return True
+                    return True, id1, id2
+                firstNode = stateTree.getNextNode(firstNode)
 
-    return False
+    return False, None, None
 
 def checkSegmentIntersection(segment1, segment2):
     ccw1 = compare_ccw(segment1[0], segment1[1], segment2[0])*compare_ccw(segment1[0], segment1[1], segment2[1])
@@ -68,10 +69,6 @@ def checkSegmentsIntersectionTrivial(segments):
             if checkSegmentIntersection(segments[i], segments[j]):
                 return True
     return False
-
-def checkSegmentsIntersection(segments):
-    events = [i for i in range(len(segments)) for j in range(2)]
-    events.sort(key = cmp_to_key(lambda i,j : -1 if segments[i][0] < segments[j][0] else 1))
 
 def generateRandomSegment(boxsize, maxlength):
     segment = []
@@ -115,12 +112,17 @@ def plotsegmentsMain():
     segments = [generateRandomSegment(box_size,max_length) for i in range(num_segments)]
     #segments = [generateRandomSegmentBox(i,i+cell_size,j,j+cell_size) for i in range(0,box_size,cell_size) for j in range(0,box_size,cell_size)]
 
-    for segment in segments:
-        plt.plot(*zip(*segment), color = 'green', marker='s')
+    #print(checkSegmentsIntersectionTrivial(segments))
+    detected, id1, id2 = detectIntersection(segments)
+
+    for id,segment in enumerate(segments):
+        if id in [id1, id2]:
+            plt.plot(*zip(*segment), color = 'green', marker='*', linewidth = 3)
+        else:
+            plt.plot(*zip(*segment), color = 'teal', marker='x', alpha = 0.7)    
+        
 
     plt.show()
-
-    print(checkSegmentsIntersectionTrivial(segments))
 
 def testSegmentClass():
     segment = Segment((1,2),(3,4))
