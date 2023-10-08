@@ -41,7 +41,34 @@ def detectIntersection(segments : list[Segment]):
     for i in eventList:
         if i // L == 0:
             root = stateTree.insert(root, i, segments[i%L][i//L][1])
+
+            curNode = stateTree.getNodeById(root,i,segments[i%L][i//L][1])
+            nextNode = stateTree.getNextNode(curNode)
+            prevNode = stateTree.getPreviousNode(curNode)
+            id1 = prevNode.id if prevNode is not None else None
+            id2 = nextNode.id if nextNode is not None else None
+            
+            if id1 is None or id2 is None:
+                continue
+
+            if checkSegmentIntersection(segments[id1], segments[i]) == True:
+                return True, id1, i
+            if checkSegmentIntersection(segments[id2], segments[i]) == True:
+                return True, id2, i
+            
         elif i // L == 1:
+            curNode = stateTree.getNodeById(root,i,segments[i%L][i//L][1])
+            nextNode = stateTree.getNextNode(curNode)
+            prevNode = stateTree.getPreviousNode(curNode)
+            id1 = prevNode.id if prevNode is not None else None
+            id2 = nextNode.id if nextNode is not None else None
+            
+            if id1 is None or id2 is None:
+                continue
+
+            if checkSegmentIntersection(segments[id1], segments[id2]) == True:
+                return True, id1, id2
+
             root = stateTree.delete(root, i, segments[i%L][i//L][1])
 
         if stateTree.getHeight(root) > 1:
@@ -108,9 +135,9 @@ def plotsegmentsMain():
     box_size = 100
     max_length = box_size*0.3
     cell_size = 20
-    random.seed(1)
-    segments = [generateRandomSegment(box_size,max_length) for i in range(num_segments)]
-    #segments = [generateRandomSegmentBox(i,i+cell_size,j,j+cell_size) for i in range(0,box_size,cell_size) for j in range(0,box_size,cell_size)]
+    #random.seed(1)
+    #segments = [generateRandomSegment(box_size,max_length) for i in range(num_segments)]
+    segments = [generateRandomSegmentBox(i,i+cell_size,j,j+cell_size) for i in range(0,box_size,cell_size) for j in range(0,box_size,cell_size)]
 
     #print(checkSegmentsIntersectionTrivial(segments))
     detected, id1, id2 = detectIntersection(segments)

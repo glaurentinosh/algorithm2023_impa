@@ -196,27 +196,34 @@ class AVL_Tree(object):
 
 		return self.getMaxValueNode(root.right)
 	
-	def getPreviousNode(self, root, id, key):
+	def getNodeById(self, root, id, key):
 		if not root:
 			return None
 
 		elif key < root.val:
-			return self.getPreviousNode(root.left, id, key)
+			return self.getNodeById(root.left, id, key)
 
 		elif key > root.val:
-			return self.getPreviousNode(root.right, id, key)
+			return self.getNodeById(root.right, id, key)
 
 		else:
-			if root.left is not None:
-				return self.getMaxValueNode(root.left)
-			auxNode = root
-			while auxNode.parent is not None:
-				if auxNode.parent.right == auxNode:
-					return auxNode.parent 
-				auxNode = auxNode.parent
+			return root
+
+	def getPreviousNode(self, root):
+		if root is None:
 			return None
+		if root.left is not None:
+			return self.getMaxValueNode(root.left)
+		auxNode = root
+		while auxNode.parent is not None:
+			if auxNode.parent.right == auxNode:
+				return auxNode.parent 
+			auxNode = auxNode.parent
+		return None
 	
 	def getNextNode(self, root):
+		if root is None:
+			return None
 		if root.right is not None:
 			return self.getMinValueNode(root.right)
 		auxNode = root
