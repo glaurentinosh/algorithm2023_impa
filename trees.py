@@ -86,7 +86,8 @@ class AVL_Tree(object):
 
 			temp = self.getMinValueNode(root.right)
 			root.val = temp.val
-			root.right = self.delete(root.right, id,
+			root.id = temp.id
+			root.right = self.delete(root.right, temp.id,
 									temp.val)
 
 		# If the tree has only one node,
@@ -241,6 +242,13 @@ class AVL_Tree(object):
 		print("{0} ".format(root.val), end="")
 		self.preOrder(root.left)
 		self.preOrder(root.right)
+
+	def inOrder(self, root):
+		if root:
+			self.inOrder(root.left)
+			print("ID: {}, Value: {}".format(root.id, root.val))
+			self.inOrder(root.right)
+
 
 if __name__ == "__main__":
 	myTree = AVL_Tree()

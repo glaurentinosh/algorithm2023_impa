@@ -47,6 +47,47 @@ def getEventList(segments : list[Segment]):
 	
 	return sortedList
 
+def detectIntersectionList(segments : list[Segment]):
+	eventList = getEventList(segments)
+	state = []
+
+	L = len(segments)
+
+	for i in eventList:
+		if i // L == 0:
+			state.append((i, segments[i%L][i//L][1]))
+			curNode = state[-1]
+			nextNode = state.getNextNode(curNode)
+			prevNode = state.getPreviousNode(curNode)
+			id1 = prevNode.id if prevNode is not None else None
+			id2 = nextNode.id if nextNode is not None else None
+			
+			if id1 is None or id2 is None:
+				continue
+
+			if checkSegmentIntersection(segments[id1], segments[i]) == True:
+				return True, id1, i
+			if checkSegmentIntersection(segments[id2], segments[i]) == True:
+				return True, id2, i
+			
+		elif i // L == 1:
+			curNode = state.getNodeById(root,i,segments[i%L][i//L][1])
+			nextNode = state.getNextNode(curNode)
+			prevNode = state.getPreviousNode(curNode)
+			id1 = prevNode.id if prevNode is not None else None
+			id2 = nextNode.id if nextNode is not None else None
+			
+			if id1 is None or id2 is None:
+				continue
+
+			if checkSegmentIntersection(segments[id1], segments[id2]) == True:
+				return True, id1, id2
+
+			root = state.delete(root, i, segments[i%L][i//L][1])
+
+	return False, None, None
+
+
 def detectIntersection(segments : list[Segment]):
 	eventList = getEventList(segments)
 	stateTree = AVL_Tree()
@@ -230,8 +271,8 @@ def timeAnalysis():
 		for i in range(numturns):
 			start_time = time.time()
 			#segments = [generateRandomSegment(box_size,max_length) for i in range(num_segments)]
-			segments = [Segment.from_list(generateRandomSegmentBox(i,i+cell_size,j,j+cell_size)) for i in range(0,box_size,cell_size) for j in range(0,box_size,cell_size)]
-			#segments = [Segment.from_list(generateRandomSegmentRangeLen(box_size,length)) for i in range(numseg)]
+			#segments = [Segment.from_list(generateRandomSegmentBox(i,i+cell_size,j,j+cell_size)) for i in range(0,box_size,cell_size) for j in range(0,box_size,cell_size)]
+			segments = [Segment.from_list(generateRandomSegmentRangeLen(box_size,length)) for i in range(numseg)]
 
 			#detected = checkSegmentsIntersectionTrivial(segments)
 			detected, id1, id2 = detectIntersection(segments)
@@ -243,15 +284,55 @@ def timeAnalysis():
 	#plotdata = [(box_size/cell_size)**2 for cell_size in cellsizes]
 	xaxis = numsegrange
 
-	with open('plotdata/detection_false_verybig.txt', 'w') as f:
+	with open('plotdata/detection_verylarge.txt', 'w') as f:
 		for line in list(zip(xaxis, meantimes)):
 			f.write(f"{line}\n")
 
 	plt.plot(xaxis, meantimes)
 	plt.show()
 
+def checkIntersectionMain():
+	num_segments = 100000
+	box_size = 1000
+	length = box_size*0.001
+	varlength = box_size*0.001
+	cell_size = 5
+	#random.seed(1)
+	#segments = [generateRandomSegment(box_size,max_length) for i in range(num_segments)]
+	segments = [generateRandomSegmentBox(i,i+cell_size,j,j+cell_size) for i in range(0,box_size,cell_size) for j in range(0,box_size,cell_size)]
+	#segments = [Segment.from_list(generateRandomSegmentRangeLen(box_size,length,varlength)) for i in range(num_segments)]
+
+	start_time = time.time()
+	#print(checkSegmentsIntersectionTrivial(segments))
+	detected, id1, id2 = detectIntersection(segments)
+	elapsed = time.time() - start_time
+	print("Time:", elapsed)
+	print("Detected =", detected)
+
+def testeMateus():
+	segmentos = [[(30, 62), (53, 49)],
+             [(63, 35), (85, 63)],
+             [(25, 52), (31, 22)],
+             [(20, 81), (66, 54)],
+             [(58, 75), (28, 32)]]
+
+	root_sweep = None
+
+	Sweep_Line = AVL_Tree()
+
+	root_sweep = Sweep_Line.insert(root_sweep, 2, 5)
+	root_sweep = Sweep_Line.insert(root_sweep, 4, 7)
+	root_sweep = Sweep_Line.insert(root_sweep, 3, 8)
+
+	print(Sweep_Line.inOrder(root_sweep))
+
+	root_sweep = Sweep_Line.delete(root_sweep,4,7)
+
+	print(Sweep_Line.inOrder(root_sweep))
+
 if __name__ == "__main__":
 	#plotsegmentsMain()
 	#testSegmentClass()
 	#checkIntersectionMain()
-	timeAnalysis()
+	#timeAnalysis()
+	testeMateus()
