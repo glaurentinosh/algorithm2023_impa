@@ -239,7 +239,7 @@ class AVL_Tree(object):
 		if not root:
 			return
 
-		print("{0} ".format(root.val), end="")
+		print("{0} ".format(root.id), end="")
 		self.preOrder(root.left)
 		self.preOrder(root.right)
 
