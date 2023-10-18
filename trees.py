@@ -76,11 +76,15 @@ class AVL_Tree(object):
 		else:
 			if root.left is None:
 				temp = root.right
+				if temp:
+					temp.parent = root.parent if root else None
 				root = None
 				return temp
 
 			elif root.right is None:
 				temp = root.left
+				if temp:
+					temp.parent = root.parent if root else None
 				root = None
 				return temp
 
@@ -234,12 +238,15 @@ class AVL_Tree(object):
 			auxNode = auxNode.parent
 		return None
 
+	def swapNodes(self, node1, node2):
+		node1.id, node2.id = node2.id, node1.id
+
 	def preOrder(self, root):
 
 		if not root:
 			return
 
-		print("{0} ".format(root.id), end="")
+		print("({0},{1},height={2}) ".format(root.id, root.val, root.height), end="")
 		self.preOrder(root.left)
 		self.preOrder(root.right)
 
@@ -248,6 +255,15 @@ class AVL_Tree(object):
 			self.inOrder(root.left)
 			print("ID: {}, Value: {}".format(root.id, root.val))
 			self.inOrder(root.right)
+		
+	def seeTree(self, root):
+		if not root:
+			return
+		print("Id, value: {}, {} - Left Id: {}, Right Id: {} - Parent Id: {}".format(root.id, root.val,
+				(root.left.id, root.left.val) if root.left else None, (root.right.id, root.right.val) if root.right else None,
+				(root.parent.id,root.parent.val) if root.parent else None))
+		self.seeTree(root.left)
+		self.seeTree(root.right)
 
 
 if __name__ == "__main__":
@@ -259,19 +275,21 @@ if __name__ == "__main__":
 
 	# for id, num in enumerate(nums):
 	# 	root = myTree.insert(root, id, num)
-	root = myTree.insert(root, 0, 10) 
-	root = myTree.insert(root, 1, 20) 
-	root = myTree.insert(root, 2, 30) 
-	root = myTree.insert(root, 3, 40) 
-	root = myTree.insert(root, 4, 50) 
-	root = myTree.insert(root, 5, 25) 
+	root = myTree.insert(root, 0, 3) 
+	root = myTree.insert(root, 1, 9) 
+	root = myTree.insert(root, 2, 0) 
+	root = myTree.insert(root, 3, 11) 
+	root = myTree.insert(root, 4, 12) 
+	root = myTree.insert(root, 5, 1) 
+	root = myTree.insert(root, 6, 4) 
+	root = myTree.insert(root, 7, 6) 
 
-	root = myTree.delete(root, 1, 20)
+	print("\nBefore deletion")
+	myTree.seeTree(root)
 
-	# Preorder Traversal
-	print("Preorder Traversal after insertion -")
-	myTree.preOrder(root)
-	print()
+	root = myTree.delete(root, 3, 11)
+	print("\nAfter deletion")
+	myTree.seeTree(root)
 
 	# Delete
 	# key = 10
@@ -288,7 +306,8 @@ if __name__ == "__main__":
 	print(myTree.getMaxValueNode(root).val)
 	print()
 
-	print("Next of 25", myTree.getNextNode(root, 5, 25).val)
+	curnode = myTree.getNodeById(root, 5,1)
+	print("Next of 25", myTree.getNextNode(curnode).val)
 	#print("Previous of 5", myTree.getPreviousNode(root, 1, 5).val)
 
 
