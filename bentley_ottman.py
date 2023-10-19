@@ -59,10 +59,10 @@ class Segment:
 		return cls(*[Point(tup) for tup in segmentList])
 
 	def __getitem__(self,key):
-		if key not in (0,1):
-			raise IndexError
-		return self.p1 if key == 0 else self.p2
-	 
+		if key in (0,1):
+			return self.p1 if key == 0 else self.p2
+		raise IndexError
+
 	def __setitem__(self,key,value):
 		if key == 0:
 			self.p1 = value
@@ -81,7 +81,8 @@ class Segment:
 		A = self.p2[1] - self.p1[1]
 		B = self.p1[0] - self.p2[0]
 		C = A*self.p1[0] + B*self.p1[1]
-		return (C-A*x)/B
+		val = (C-A*x)/B
+		return val
 
 # def setSegmentByList(seglist : list[Segment]):
 # 	return Segment(seglist[0],seglist[1])
@@ -156,29 +157,33 @@ class StateList:
 		self._lst.remove(item) 
 
 class Node(object):
-	def __init__(self, id, comparator):
+	def __init__(self, id, lt, gt):
 		self.val = id
 		self.left = None
 		self.right = None
 		self.height = 1
 		self.parent = None
-		self.comparator = comparator
+		self.lt = lt
+		self.gt = gt
 
 	def __lt__(self, other):
-		return self.comparator(self.val, other.val)
+		return self.lt(self.val, other.val)
+	def __gt__(self, other):
+		return self.gt(self.val, other.val)
 
 class StateTree(object):
  
-	def __init__(self, segments : list[Segment], comparator):
+	def __init__(self, segments : list[Segment], lt, gt):
 		self.segments = segments
-		self.comparator = comparator
+		self.lt = lt
+		self.gt = gt
 
 	def insert(self, root, key):
 		
 		# Step 1 - Perform normal BST
-		node = Node(key, self.comparator)
+		node = Node(key, self.lt, self.gt)
 		if not root:
-			return Node(key, self.comparator)
+			return Node(key, self.lt, self.gt)
 		elif node < root:
 			root.left = self.insert(root.left, key)
 			root.left.parent = root
@@ -221,7 +226,7 @@ class StateTree(object):
 	# It returns root of the modified subtree.
 	def delete(self, root, key):
 
-		node = Node(key, self.comparator)
+		node = Node(key, self.lt, self.gt)
 		# Step 1 - Perform standard BST delete
 		if not root:
 			return root
@@ -359,15 +364,15 @@ class StateTree(object):
 		return self.getMaxValueNode(root.right)
 	
 	def getNodeById(self, root, key):
-		node = Node(key, self.comparator)
+		node = Node(key, self.lt, self.gt)
 
 		if not root:
 			return None
 		
-		elif node < root:
+		elif root > node:
 			return self.getNodeById(root.left, key)
 
-		elif node > root:
+		elif root < node:
 			return self.getNodeById(root.right, key)
 
 		else:
@@ -398,6 +403,8 @@ class StateTree(object):
 		return None
 
 	def swapNodes(self, node1, node2):
+		if node1 is None or node2 is None:
+			return
 		node1.val, node2.val = node2.val, node1.val
 
 	def preOrder(self, root):
@@ -430,8 +437,10 @@ class BentleyOttman:
 		self.segments = segments
 		self.eventQueue = getEventQueue(self.segments)
 		self.currentEvent = self.eventQueue[0]
-		self.comparator = lambda i,j : self.segments[i].evalX(self.currentEvent) < self.segments[j].evalX(self.currentEvent)
-		self.stateTree = StateTree(self.segments, self.comparator)
+		self.previousEvent = None
+		self.lt = lambda i,j : self.segments[i].evalX(self.currentEvent) < self.segments[j].evalX(self.currentEvent)
+		self.gt = lambda i,j : self.segments[i].evalX(self.currentEvent) > self.segments[j].evalX(self.currentEvent)
+		self.stateTree = StateTree(self.segments, self.lt, self.gt)
 		self.root = None
 	
 	def identify(self):
@@ -441,7 +450,7 @@ class BentleyOttman:
 			xvalue, yvalue, event = heapq.heappop(self.eventQueue)
 			self.currentEvent = xvalue
 			print("In xvalue", xvalue, "and event type", event.type.value)
-			self.stateTree.seeTree(self.root)
+			#self.stateTree.seeTree(self.root)
 			if event.type == EventType.ADD:
 				i = event.id[0]
 				#yvalue = self.segments[i][0][1]
@@ -452,14 +461,23 @@ class BentleyOttman:
 				id1 = prevNode.val if prevNode is not None else None
 				id2 = nextNode.val if nextNode is not None else None
 				
+				if id1 == id2 or id1 == i or id2 == i:
+					continue
+
 				if id1 is not None and checkSegmentIntersection(self.segments[id1], self.segments[i]) == True:
+					if id1 == i:
+						continue
 					idtuple = (id1,i) if id1 < i else (i,id1)
 					intersections.append(idtuple)
+					print("intersection", idtuple)
 					xintersection,yintersection = getXYIntersection(self.segments[id1], self.segments[i])
 					heapq.heappush(self.eventQueue, (xintersection,yintersection, Event(EventType.INTERSECTION, idtuple)))
 				if id2 is not None and checkSegmentIntersection(self.segments[id2], self.segments[i]) == True:
+					if id2 == i:
+						continue
 					idtuple = (id2, i) if id2 < i else (i, id2)
 					intersections.append(idtuple)
+					print("intersection", idtuple)
 					xintersection,yintersection = getXYIntersection(self.segments[id2], self.segments[i])
 					heapq.heappush(self.eventQueue, (xintersection,yintersection, Event(EventType.INTERSECTION, idtuple)))
 
@@ -472,12 +490,15 @@ class BentleyOttman:
 				id1 = prevNode.val if prevNode is not None else None
 				id2 = nextNode.val if nextNode is not None else None
 				
-				if id1 is None or id2 is None:
+				if id1 is None or id2 is None or id1 == id2:
 					continue
 
 				if checkSegmentIntersection(self.segments[id1], self.segments[id2]) == True:
+					if id2 ==  id1:
+						continue
 					idtuple = (id2, id1) if id2 < id1 else (id1, id2)
 					intersections.append(idtuple)
+					print("intersection", idtuple)
 					xintersection,yintersection = getXYIntersection(self.segments[id2], self.segments[id1])
 					heapq.heappush(self.eventQueue, (xintersection,yintersection, Event(EventType.INTERSECTION, idtuple)))
 
@@ -485,11 +506,47 @@ class BentleyOttman:
 
 			elif event.type == EventType.INTERSECTION:
 				id1,id2 = event.id
-				print("Intersection",id1,id2)
+				if id1 == id2:
+					continue
+				tmpcurevent = self.currentEvent
+				self.currentEvent = self.previousEvent
+				node1 = self.stateTree.getNodeById(self.root, id1)
+				node2 = self.stateTree.getNodeById(self.root, id2)
+				self.stateTree.swapNodes(node1, node2)
+				
+				if node1 is None or node2 is None:
+					continue
+
+				n1 = node1 if node1 < node2 else node2
+				n2 = node1 if n1 == node2 else node2
+
+				nextNode = self.stateTree.getNextNode(n2)
+				prevNode = self.stateTree.getPreviousNode(n1)
+				id1 = prevNode.val if prevNode is not None else None
+				id2 = nextNode.val if nextNode is not None else None
+				
+				self.currentEvent = tmpcurevent
+
+				if id1 is None or id2 is None:
+					continue
+
+				if checkSegmentIntersection(self.segments[id1], self.segments[id2]) == True:
+					if id1 == id2:
+						continue
+					idtuple = (id2, id1) if id2 < id1 else (id1, id2)
+					print("intersection", idtuple)
+					xintersection,yintersection = getXYIntersection(self.segments[id2], self.segments[id1])
+					if xintersection >= self.currentEvent:
+						intersections.append(idtuple)
+						heapq.heappush(self.eventQueue, (xintersection,yintersection, Event(EventType.INTERSECTION, idtuple)))
+
+				#print("Intersection",id1,id2)
 
 
 			else:
 				print("Event type is not valid :", event.type)
+
+			self.previousEvent = self.currentEvent
 
 		return intersections
 
@@ -503,17 +560,25 @@ if __name__ == "__main__":
 	seglist = [
 		[(1,7),(8,5)],[(2,5),(7,3)],[(3,1),(9,12)],[(6.5,6),(10,7)],[(1,1),(4.1,3.2)] 
 	]
-	segments = [Segment.from_list(seg) for seg in s1]
+	segments = [Segment.from_list(seg) for seg in seglist]
 
 	print(getXYIntersection(segments[1], segments[2]))
 
+	random.seed(1)
 	box_size = 100
-	length = box_size*0.1
+	length = box_size*0.5
 	varlength = box_size*0.01
-	num_segments = 100
+	num_segments = 30
 	segments = [Segment.from_list(generateRandomSegmentRangeLen(box_size,length,varlength)) for i in range(num_segments)]
 	
-	random.shuffle(segments)
+	#random.shuffle(segments)
+
+	for id,segment in enumerate(segments):
+		if id not in [49,79]:
+			continue
+		plt.text(*segment.getCentroid(), str(id))
+		plt.plot(*zip(*segment), color = 'teal', marker='x', alpha = 0.7)    
+	plt.show()
 
 	bentley = BentleyOttman(segments)
 
